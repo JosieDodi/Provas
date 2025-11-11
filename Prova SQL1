@@ -1,6 +1,19 @@
-CREATE TABLE Clientes (
+CREATE DATABASE IF NOT EXISTS empresa;
+USE empresa;
+
+CREATE TABLE IF NOT EXISTS Clientes (
     ID INT AUTO_INCREMENT PRIMARY KEY,
-    Nome VARCHAR(100) NOT NULL,
+    Nome VARCHAR(100),
     Idade INT,
     Cidade VARCHAR(100)
 );
+
+INSERT INTO Clientes (Nome, Idade, Cidade)
+VALUES
+('Ana Souza', 25, 'São Paulo'),
+('Carlos Lima', 32, 'Rio de Janeiro'),
+('Beatriz Silva', 19, 'Curitiba'),
+('João Mendes', 41, 'Salvador'),
+('Paula Rocha', 28, 'Belo Horizonte');
+
+SELECT * FROM Clientes;
