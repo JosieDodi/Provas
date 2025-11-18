@@ -1,0 +1,66 @@
+IF OBJECT_ID('Estoque', 'U') IS NOT NULL DROP TABLE Estoque;
+IF OBJECT_ID('Produtos', 'U') IS NOT NULL DROP TABLE Produtos;
+IF OBJECT_ID('Fornecedores', 'U') IS NOT NULL DROP TABLE Fornecedores;
+
+CREATE TABLE Produtos (
+    ProdutoID INT PRIMARY KEY,
+    NomeProduto VARCHAR(100) NOT NULL,
+    Quantidade INT NOT NULL,
+    Preco DECIMAL(10,2) NOT NULL
+);
+
+INSERT INTO Produtos (ProdutoID, NomeProduto, Quantidade, Preco)
+VALUES
+(1, 'Arroz 5Kg', 40, 22.90),
+(2, 'Feijao Carioca 1Kg', 35, 8.50),
+(3, 'Oleo de Soja 900ml', 50, 6.99),
+(4, 'Cafe 500g', 25, 14.99);
+
+CREATE TABLE Fornecedores (
+    FornecedorID INT PRIMARY KEY,
+    NomeFornecedor VARCHAR(100) NOT NULL,
+    Telefone VARCHAR(20)
+);
+
+INSERT INTO Fornecedores (FornecedorID, NomeFornecedor, Telefone)
+VALUES
+(1, 'Distribuidora Central', '11999990000'),
+(2, 'Mercado Atacado', '11888880000'),
+(3, 'Fornecedor Premium', '11777770000'),
+(4, 'Alimentos Brasil', '11666660000');
+
+CREATE TABLE Estoque (
+    EstoqueID INT PRIMARY KEY,
+    ProdutoID INT NOT NULL,
+    FornecedorID INT NOT NULL,
+    Quantidade INT NOT NULL,
+    DataEntrada DATE NOT NULL,
+    FOREIGN KEY (ProdutoID) REFERENCES Produtos(ProdutoID),
+    FOREIGN KEY (FornecedorID) REFERENCES Fornecedores(FornecedorID)
+);
+
+INSERT INTO Estoque (EstoqueID, ProdutoID, FornecedorID, Quantidade, DataEntrada)
+VALUES
+(1, 1, 1, 20, '2025-01-10'),
+(2, 2, 2, 15, '2025-01-12'),
+(3, 3, 3, 30, '2025-01-15'),
+(4, 4, 4, 10, '2025-01-18');
+
+SELECT 
+    E.EstoqueID,
+    P.NomeProduto,
+    F.NomeFornecedor,
+    E.Quantidade,
+    E.DataEntrada
+FROM Estoque E
+FULL OUTER JOIN Produtos P ON E.ProdutoID = P.ProdutoID
+FULL OUTER JOIN Fornecedores F ON E.FornecedorID = F.FornecedorID;
+
+SELECT 
+    ProdutoID,
+    SUM(Quantidade) AS TotalRecebido
+FROM Estoque
+GROUP BY ProdutoID;
+
+ALTER TABLE Estoque
+ADD DataValidade DATE;
