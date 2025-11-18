@@ -1,0 +1,16 @@
+DROP TABLE IF EXISTS Produtos;
+
+CREATE TABLE Produtos (
+    ProdutoID INT PRIMARY KEY,
+    NomeProduto VARCHAR(100) NOT NULL,
+    Quantidade INT NOT NULL,
+    Preco DECIMAL(10,2) NOT NULL
+);
+
+INSERT INTO Produtos (ProdutoID, NomeProduto, Quantidade, Preco)
+VALUES
+(1, 'Arroz 5Kg', 40, 22.90),
+(2, 'Feijao Carioca 1Kg', 35, 8.50),
+(3, 'Oleo de Soja 900ml', 50, 6.99);
+
+SELECT * FROM Produtos;
