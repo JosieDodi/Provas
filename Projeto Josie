@@ -1,0 +1,194 @@
+import sqlite3
+from datetime import datetime
+
+class BancoDeDados:
+    def __init__(self, arquivo="estoque.db"):
+        self.conn = sqlite3.connect(arquivo)
+        self.cursor = self.conn.cursor()
+        self.criar_tabelas()
+
+    def criar_tabelas(self):
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS produtos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                descricao TEXT,
+                quantidade INTEGER NOT NULL,
+                preco REAL NOT NULL
+            );
+        """)
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS vendas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                produto_id INTEGER NOT NULL,
+                quantidade INTEGER NOT NULL,
+                data_venda DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (produto_id) REFERENCES produtos(id)
+            );
+        """)
+
+        self.conn.commit()
+
+    def executar(self, sql, params=None):
+        if params:
+            self.cursor.execute(sql, params)
+        else:
+            self.cursor.execute(sql)
+        self.conn.commit()
+        return self.cursor
+
+    def fechar(self):
+        self.conn.close()
+
+class Produto:
+    def __init__(self, id, nome, descricao, quantidade, preco):
+        self.id = id
+        self.nome = nome
+        self.descricao = descricao
+        self.quantidade = quantidade
+        self.preco = preco
+
+    def __str__(self):
+        return f"{self.id} - {self.nome} ({self.quantidade} unidades)"
+
+class Venda:
+    def __init__(self, id, produto_id, quantidade, data_venda=None):
+        self.id = id
+        self.produto_id = produto_id
+        self.quantidade = quantidade
+        self.data_venda = data_venda or datetime.now()
+
+    def __str__(self):
+        return f"Venda {self.id}: Produto {self.produto_id}, qtd {self.quantidade}"
+
+class RepositorioProduto:
+    def __init__(self, banco):
+        self.db = banco
+
+    def criar(self, produto):
+        sql = """
+            INSERT INTO produtos (nome, descricao, quantidade, preco)
+            VALUES (?, ?, ?, ?)
+        """
+        self.db.executar(sql, (produto.nome, produto.descricao, produto.quantidade, produto.preco))
+
+    def listar(self):
+        sql = "SELECT * FROM produtos"
+        rows = self.db.executar(sql).fetchall()
+        return [Produto(*r) for r in rows]
+
+    def atualizar_quantidade(self, produto_id, nova_qtd):
+        sql = "UPDATE produtos SET quantidade = ? WHERE id = ?"
+        self.db.executar(sql, (nova_qtd, produto_id))
+
+    def remover(self, produto_id):
+        sql = "DELETE FROM produtos WHERE id = ?"
+        self.db.executar(sql, (produto_id,))
+
+class RepositorioVenda:
+    def __init__(self, banco):
+        self.db = banco
+
+    def registrar(self, venda):
+        # Verifica estoque
+        estoque = self.db.executar(
+            "SELECT quantidade FROM produtos WHERE id = ?",
+            (venda.produto_id,)
+        ).fetchone()
+
+        if not estoque:
+            raise ValueError("Produto não encontrado.")
+
+        if venda.quantidade > estoque[0]:
+            raise ValueError("Estoque insuficiente.")
+
+        # Registrar venda
+        sql = "INSERT INTO vendas (produto_id, quantidade) VALUES (?, ?)"
+        self.db.executar(sql, (venda.produto_id, venda.quantidade))
+
+        # Atualizar estoque
+        sql = "UPDATE produtos SET quantidade = quantidade - ? WHERE id = ?"
+        self.db.executar(sql, (venda.quantidade, venda.produto_id))
+
+    def listar(self):
+        sql = "SELECT * FROM vendas"
+        rows = self.db.executar(sql).fetchall()
+        return [Venda(*r) for r in rows]
+  
+def menu():
+    BLUE = "\033[94m"
+    PINK = "\033[95m"
+    CYAN = "\033[96m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+
+    print(f"\n{PINK}{BOLD}================= SISTEMA FLOWERS KNOW ================={RESET}")
+    print(f"{CYAN}{BOLD}1{RESET} - Cadastrar produto")
+    print(f"{CYAN}{BOLD}2{RESET} - Listar produtos")
+    print(f"{CYAN}{BOLD}3{RESET} - Atualizar quantidade")
+    print(f"{CYAN}{BOLD}4{RESET} - Remover produto")
+    print(f"{CYAN}{BOLD}5{RESET} - Registrar venda")
+    print(f"{CYAN}{BOLD}6{RESET} - Listar vendas")
+    print(f"{RED}{BOLD}0{RESET} - Sair")
+    print(f"{PINK}{BOLD}========================================================={RESET}")
+
+    return input(f"{YELLOW}{BOLD}Escolha uma opção: {RESET}")
+
+if __name__ == "__main__":
+    db = BancoDeDados()
+    produtos = RepositorioProduto(db)
+    vendas = RepositorioVenda(db)
+
+    while True:
+        opcao = menu()
+
+        if opcao == "1":
+            nome = input("Nome do produto: ")
+            desc = input("Descrição: ")
+            qtd = int(input("Quantidade: "))
+            preco = float(input("Preço: "))
+
+            novo = Produto(None, nome, desc, qtd, preco)
+            produtos.criar(novo)
+            print("Produto cadastrado!")
+
+        elif opcao == "2":
+            print("\nProdutos cadastrados:")
+            for p in produtos.listar():
+                print(p)
+
+        elif opcao == "3":
+            idp = int(input("ID do produto: "))
+            nova_qtd = int(input("Nova quantidade: "))
+            produtos.atualizar_quantidade(idp, nova_qtd)
+            print("Quantidade atualizada!")
+
+        elif opcao == "4":
+            idp = int(input("ID do produto para remover: "))
+            produtos.remover(idp)
+            print("Produto removido!")
+
+        elif opcao == "5":
+            produto_id = int(input("ID do produto: "))
+            qtd = int(input("Quantidade vendida: "))
+            venda = Venda(None, produto_id, qtd)
+            vendas.registrar(venda)
+            print("Venda registrada!")
+
+        elif opcao == "6":
+            print("\nVendas registradas:")
+            for v in vendas.listar():
+                print(v)
+
+        elif opcao == "0":
+            print("Saindo...")
+            break
+
+        else:
+            print("Opção inválida!")
+
+    db.fechar()
